@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Guild {
+  id        String   @id
+  name      String?
+  logChannelId String?
+  welcomeChannelId String?
+  welcomeMessage   String?
+  unverifiedRoleId String?
+  verifiedRoleId   String?
+  ticketCategoryId String?
+  createdAt DateTime @default(now())
+
+  objectiveTarget      Int      @default(300)
+  objectiveDescription String   @default("Au 300 membres NoName fait un live et un event Discord où il vous aide à gérer vos crush (et à la fin il dit à la sienne qu'il la kiffe).")
+  objectiveReached     Boolean  @default(false)
+  objectiveMessageId   String?
+  memberCountChannelId String?
+
+  cases       Case[]
+  infractions Infraction[]
+}
+
+model Case {
+  id          Int      @id @default(autoincrement())
+  guildId     String
+  userId      String
+  moderatorId String
+  action      String
+  reason      String
+  duration    String?
+  createdAt   DateTime @default(now())
+
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  @@index([guildId, userId])
+}
+
+model Infraction {
+  id        Int       @id @default(autoincrement())
+  guildId   String
+  userId    String
+  type      String
+  reason    String
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  @@index([guildId, userId])
+}
+
+model BlacklistWord {
+  id        Int      @id @default(autoincrement())
+  guildId   String
+  word      String
+  createdAt DateTime @default(now())
+
+  @@index([guildId])
+}
+
+model Ticket {
+  id          Int      @id @default(autoincrement())
+  guildId     String
+  userId      String
+  channelId   String
+  category    String
+  status      String   @default("OPEN")
+  createdAt   DateTime @default(now())
+  closedAt    DateTime?
+
+  @@index([guildId, userId])
+}
+
+model LevelData {
+  id           Int      @id @default(autoincrement())
+  guildId      String
+  userId       String
+  xp           Int      @default(0)
+  level        Int      @default(0)
+  lastMessageAt DateTime?
+
+  @@unique([guildId, userId])
+}
+
+model MemberStats {
+  id           Int      @id @default(autoincrement())
+  guildId      String
+  userId       String
+  messageCount Int      @default(0)
+  mentionCount Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@unique([guildId, userId])
+  @@index([guildId, userId])
+}
+
+model Giveaway {
+  id          Int             @id @default(autoincrement())
+  guildId     String
+  channelId   String
+  messageId   String?         @unique
+  prize       String
+  winnerCount Int             @default(1)
+  hostId      String
+  endsAt      DateTime
+  ended       Boolean         @default(false)
+  winnerIds   String[]
+  createdAt   DateTime        @default(now())
+  entries     GiveawayEntry[]
+
+  @@index([guildId, ended])
+}
+
+model GiveawayEntry {
+  id         Int      @id @default(autoincrement())
+  giveawayId Int
+  userId     String
+  giveaway   Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+
+  @@unique([giveawayId, userId])
+}
+
+model InviteJoin {
+  id        Int      @id @default(autoincrement())
+  guildId   String
+  inviterId String
+  invitedId String
+  createdAt DateTime @default(now())
+
+  @@unique([guildId, invitedId])
+  @@index([guildId, inviterId])
+}
+
+model MatchProfile {
+  id        Int         @id @default(autoincrement())
+  guildId   String
+  userId    String
+  channelId String
+  messageId String?     @unique
+  createdAt DateTime    @default(now())
+  likes     MatchLike[]
+
+  @@unique([guildId, userId])
+}
+
+model MatchLike {
+  id        Int          @id @default(autoincrement())
+  profileId Int
+  userId    String
+  profile   MatchProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, userId])
+  @@index([userId])
+}
+
+// Mémorise qu'une notification a déjà été envoyée : 1 seule fois par (qui clique -> à qui)
+model MatchNotif {
+  id        Int      @id @default(autoincrement())
+  guildId   String
+  targetId  String
+  likerId   String
+  createdAt DateTime @default(now())
+
+  @@unique([guildId, targetId, likerId])
+}
+
+// Temps total passé en vocal (en secondes)
+model VoiceStat {
+  id           Int      @id @default(autoincrement())
+  guildId      String
+  userId       String
+  totalSeconds Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@unique([guildId, userId])
+  @@index([guildId, totalSeconds])
+}
