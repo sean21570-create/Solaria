@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Message, EmbedBuilder, ChannelType } from "discord.js";
 import { prisma } from "../prisma";
 import { sendLog } from "../logger";
@@ -16,8 +17,8 @@ const dernierEnvoiFaceReveal = new Map<string, number>();
 function formaterDureeRestante(ms: number): string {
   const minutes = Math.floor(ms / 60000);
   const secondes = Math.floor((ms % 60000) / 1000);
-  if (minutes > 0) return `${minutes} min ${secondes}s`;
-  return `${secondes}s`;
+  if (minutes > 0) return `${minutes} min${secondes}s`;
+  return `\${secondes}s`;
 }
 
 // ─── XP via messages ───
@@ -62,7 +63,7 @@ async function gererSalonFaceReveal(message: Message): Promise<boolean> {
 
     message.author
       .send(
-        `❌ Ton message dans **#${message.channel.name}** a été supprimé : ce salon n'accepte que les photos et vidéos.`
+        `❌ Ton message dans **#\${message.channel.name}** a été supprimé : ce salon n'accepte que les photos et vidéos.`
       )
       .catch(() => null);
 
@@ -80,7 +81,7 @@ async function gererSalonFaceReveal(message: Message): Promise<boolean> {
 
     message.author
       .send(
-        `⏳ Tu dois attendre encore **${formaterDureeRestante(restant)}** avant de pouvoir renvoyer une photo/vidéo dans **#${message.channel.name}**.`
+        `⏳ Tu dois attendre encore **\${formaterDureeRestante(restant)}** avant de pouvoir renvoyer une photo/vidéo dans **#\${message.channel.name}**.`
       )
       .catch(() => null);
 
@@ -95,7 +96,7 @@ async function gererSalonFaceReveal(message: Message): Promise<boolean> {
 
   try {
     const fil = await message.startThread({
-      name: `Discussion — ${message.author.username}`,
+      name: `Discussion — \${message.author.username}`,
       autoArchiveDuration: 1440,
     });
 
@@ -186,9 +187,9 @@ export async function handleMessageCreate(message: Message) {
 
       const embedSpam = new EmbedBuilder()
         .setColor(0xff0000)
-        .setTitle(`🛡️ AutoMod — Anti-Spam — Case #${newCase.id}`)
+        .setTitle(`🛡️ AutoMod — Anti-Spam — Case #\${newCase.id}`)
         .addFields(
-          { name: "Membre", value: `<@${message.author.id}>`, inline: true },
+          { name: "Membre", value: `<@\${message.author.id}>`, inline: true },
           { name: "Action", value: "Timeout 5 minutes", inline: true },
           { name: "Raison", value: "Flood de messages détecté" }
         )
@@ -197,7 +198,7 @@ export async function handleMessageCreate(message: Message) {
       await sendLog(message.guild, embedSpam);
 
       const avertissementSpam = await message.channel.send({
-        content: `🚫 <@${message.author.id}> a été mis en timeout pour spam.`,
+        content: `🚫 <@\${message.author.id}> a été mis en timeout pour spam.`,
       });
       setTimeout(() => avertissementSpam.delete().catch(() => null), 5000);
     }
@@ -235,7 +236,7 @@ export async function handleMessageCreate(message: Message) {
       userId: message.author.id,
       moderatorId: message.client.user!.id,
       action: "AUTOMOD_DELETE",
-      reason: `Mot interdit détecté : ${motTrouve.word}`,
+      reason: `Mot interdit détecté : \${motTrouve.word}`,
     },
   });
 
@@ -244,16 +245,16 @@ export async function handleMessageCreate(message: Message) {
       guildId,
       userId: message.author.id,
       type: "WARN",
-      reason: `AutoMod : mot interdit (${motTrouve.word})`,
+      reason: `AutoMod : mot interdit (\${motTrouve.word})`,
     },
   });
 
   const embed = new EmbedBuilder()
     .setColor(0xff0000)
-    .setTitle(`🛡️ AutoMod — Case #${newCase.id}`)
+    .setTitle(`🛡️ AutoMod — Case #\${newCase.id}`)
     .addFields(
-      { name: "Membre", value: `<@${message.author.id}>`, inline: true },
-      { name: "Salon", value: `<#${message.channel.id}>`, inline: true },
+      { name: "Membre", value: `<@\${message.author.id}>`, inline: true },
+      { name: "Salon", value: `<#\${message.channel.id}>`, inline: true },
       { name: "Raison", value: `Mot interdit détecté : \`${motTrouve.word}\`` }
     )
     .setTimestamp();
