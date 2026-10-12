@@ -4,10 +4,12 @@
     "module": "commonjs",
     "moduleResolution": "bundler",
     "outDir": "./dist",
+    "rootDir": "./src",
     "strict": false,
-    "skipLibCheck": true,
+    "noImplicitAny": false,
     "esModuleInterop": true,
+    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*", "prisma.config.ts"]
+  "include": ["src/**/*"]
 }
