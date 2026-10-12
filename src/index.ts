@@ -7,6 +7,7 @@ import {
   Partials,
 } from "discord.js";
 import * as dotenv from "dotenv";
+import http from "http";
 import * as ping from "./commands/ping";
 import * as warn from "./commands/warn";
 import * as timeout from "./commands/timeout";
@@ -309,3 +310,14 @@ client.on("guildMemberRemove", (member) => {
 });
 
 client.login(process.env.DISCORD_TOKEN!);
+
+// Serveur HTTP pour satisfaire l'attente d'un port ouvert sur Render
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("Le bot Discord Solaria est en ligne !");
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`🌐 Serveur HTTP de santé actif sur le port ${PORT}`);
+});
