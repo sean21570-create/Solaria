@@ -7,8 +7,9 @@
     "rootDir": "./src",
     "strict": false,
     "noImplicitAny": false,
-    "esModuleInterop": true,
+    "noEmitOnError": false,
     "skipLibCheck": true,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src/**/*"]
