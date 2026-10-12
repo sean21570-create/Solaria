@@ -6,11 +6,13 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": false,
-    "noImplicitAny": false,
-    "noEmitOnError": false,
     "skipLibCheck": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "esModuleInterop": true
   },
-  "include": ["src/**/*"]
+  "exclude": [
+    "src/commands/play.ts",
+    "src/events/messageCreate.ts",
+    "src/music.ts",
+    "src/xpManager.ts"
+  ]
 }
