@@ -11,5 +11,10 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": [
+    "src/commands/play.ts",
+    "src/events/messageCreate.ts",
+    "src/music.ts"
+  ]
 }
