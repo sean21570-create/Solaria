@@ -21,13 +21,11 @@ async function verifierObjectif(member: GuildMember) {
     create: { id: guildId, name: member.guild.name },
   });
 
-  if (config.objectiveReached) return; // Déjà atteint et déjà notifié, on ne refait rien
+  if (config.objectiveReached) return;
 
   const nbMembresActuels = member.guild.memberCount;
+  if (nbMembresActuels < config.objectiveTarget) return;
 
-  if (nbMembresActuels < config.objectiveTarget) return; // Pas encore atteint
-
-  // Objectif atteint : on marque comme fait pour ne plus jamais renvoyer le MP
   await prisma.guild.update({
     where: { id: guildId },
     data: { objectiveReached: true },
@@ -38,7 +36,7 @@ async function verifierObjectif(member: GuildMember) {
     await proprietaire.send(
       `🎯 **Objectif atteint !** Le serveur **${member.guild.name}** vient d'atteindre **${config.objectiveTarget} membres** !\n\n` +
         `📝 Objectif qui vient d'être rempli :\n> ${config.objectiveDescription}\n\n` +
-        `Utilise \`/setobjectif\` pour fixer le prochain objectif (nombre de membres + description).`
+        `Utilise \`/setobjectif\` pour fixer le prochain objectif.`
     );
   } catch (err) {
     console.error("⚠️ Impossible d'envoyer le MP d'objectif atteint :", err);
@@ -47,15 +45,26 @@ async function verifierObjectif(member: GuildMember) {
 
 export async function handleGuildMemberAdd(member: GuildMember) {
   const guildId = member.guild.id;
+  console.log(`👋 Nouveau membre détecté : ${member.user.tag} sur le serveur ${member.guild.name}`);
+
   // On récupère la configuration de bienvenue de ce serveur
   const guildConfig = await prisma.guild.findUnique({
     where: { id: guildId },
   });
 
+  if (!guildConfig) {
+    console.log(`⚠️ Aucune configuration trouvée en base de données pour le serveur ${guildId}`);
+  } else {
+    console.log(`🔍 Configuration trouvée - welcomeChannelId : ${guildConfig.welcomeChannelId || "Non configuré"}`);
+  }
+
   if (guildConfig?.welcomeChannelId) {
     const salonBienvenue = await member.guild.channels
       .fetch(guildConfig.welcomeChannelId)
-      .catch(() => null);
+      .catch((err) => {
+        console.error("⚠️ Impossible de fetch le salon de bienvenue :", err);
+        return null;
+      });
 
     if (salonBienvenue && salonBienvenue.isTextBased()) {
       const messagePersonnalise = guildConfig.welcomeMessage
@@ -63,18 +72,26 @@ export async function handleGuildMemberAdd(member: GuildMember) {
         : `Bienvenue <@${member.id}> !`;
 
       try {
+        console.log("🎨 Génération de la carte de bienvenue...");
         const carte = await genererCarteBienvenue(member);
         await salonBienvenue.send({ content: messagePersonnalise, files: [carte] });
+        console.log("✅ Message et carte de bienvenue envoyés avec succès !");
       } catch (err) {
-        console.error("⚠️ Erreur carte de bienvenue, envoi du texte seul :", err);
-        await salonBienvenue.send(messagePersonnalise).catch(() => null);
+        console.error("⚠️ Erreur carte de bienvenue, tentative d'envoi du texte seul :", err);
+        await salonBienvenue.send(messagePersonnalise).catch((e) => {
+          console.error("❌ Échec total de l'envoi du message de bienvenue :", e);
+        });
       }
+    } else {
+      console.log("⚠️ Le salon de bienvenue configuré est introuvable ou n'est pas textuel.");
     }
   }
 
   // On attribue automatiquement le rôle "Non vérifié" si configuré
   if (guildConfig?.unverifiedRoleId) {
-    await member.roles.add(guildConfig.unverifiedRoleId).catch(() => null);
+    await member.roles.add(guildConfig.unverifiedRoleId).catch((err) => {
+      console.error("⚠️ Erreur attribution rôle non vérifié :", err);
+    });
   }
 
   // Si le serveur est déjà en lockdown, on kick automatiquement les nouveaux arrivants
@@ -121,12 +138,12 @@ export async function handleGuildMemberAdd(member: GuildMember) {
     await sendLog(member.guild, embed);
   }
 
-  // Vérification de l'objectif de membres (après tout le reste, ne bloque rien en cas d'erreur)
+  // Vérification de l'objectif de membres
   verifierObjectif(member).catch((err) =>
     console.error("⚠️ Erreur verifierObjectif :", err)
   );
 
-  // Actualisation du salon objectif (message toujours à jour)
+  // Actualisation du salon objectif
   actualiserSalonObjectif(member.guild).catch((err) =>
     console.error("⚠️ Erreur actualiserSalonObjectif :", err)
   );
