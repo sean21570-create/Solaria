@@ -21,16 +21,28 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   await interaction.deferReply();
+  console.log(`[STATS] Début de l'exécution pour ${cible.tag} sur ${guild.name}`);
 
   try {
+    console.log("[STATS] Appel de Prisma (levelData, memberStats, voiceStat)...");
+    
+    // On isole les appels avec un timeout de sécurité de 5 secondes pour éviter le blocage infini
+    const timeoutPromise = (promise: Promise<any>, nom: string) => 
+      Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout sur ${nom}`)), 5000))
+      ]);
+
     const [niveau, stats, vocalDb, vocalSecondes] = await Promise.all([
-      prisma.levelData.findUnique({ where: { guildId_userId: { guildId: guild.id, userId: cible.id } } }).catch((err) => { console.error("Erreur prisma levelData:", err); return null; }),
-      prisma.memberStats.findUnique({ where: { guildId_userId: { guildId: guild.id, userId: cible.id } } }).catch((err) => { console.error("Erreur prisma memberStats:", err); return null; }),
-      prisma.voiceStat.findUnique({ where: { guildId_userId: { guildId: guild.id, userId: cible.id } } }).catch((err) => { console.error("Erreur prisma voiceStat:", err); return null; }),
-      secondesVocal(guild.id, cible.id).catch((err) => { console.error("Erreur secondesVocal:", err); return 0; }),
+      timeoutPromise(prisma.levelData.findUnique({ where: { guildId_userId: { guildId: guild.id, userId: cible.id } } }), "levelData").catch(e => { console.error(e); return null; }),
+      timeoutPromise(prisma.memberStats.findUnique({ where: { guildId_userId: { guildId: guild.id, userId: cible.id } } }), "memberStats").catch(e => { console.error(e); return null; }),
+      timeoutPromise(prisma.voiceStat.findUnique({ where: { guildId_userId: { guildId: guild.id, userId: cible.id } } }), "voiceStat").catch(e => { console.error(e); return null; }),
+      timeoutPromise(secondesVocal(guild.id, cible.id), "secondesVocal").catch(e => { console.error(e); return 0; }),
     ]);
 
-    // Classement : niveau d'abord, puis XP dans le niveau
+    console.log("[STATS] Données récupérées avec succès !");
+
+    // Classement
     const rangNiveau = niveau ? await rangDuMembre(guild.id, niveau.level, niveau.xp).catch(() => null) : null;
     const rangVocal = vocalDb
       ? 1 + (await prisma.voiceStat.count({ where: { guildId: guild.id, totalSeconds: { gt: vocalDb.totalSeconds } } }).catch(() => 0))
@@ -83,7 +95,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
           value: membre.joinedTimestamp
             ? `<t:${Math.floor(membre.joinedTimestamp / 1000)}:D>\n(<t:${Math.floor(membre.joinedTimestamp / 1000)}:R>)`
             : "Inconnue",
-          inline: true,
+            inline: true,
         },
         {
           name: "🪪 Compte créé",
