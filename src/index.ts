@@ -8,6 +8,10 @@ import {
 } from "discord.js";
 import * as dotenv from "dotenv";
 import http from "http";
+
+// Chargement sécurisé des variables d'environnement (en local via .env, ignoré proprement sur Render)
+dotenv.config();
+
 import * as ping from "./commands/ping";
 import * as warn from "./commands/warn";
 import * as timeout from "./commands/timeout";
@@ -66,7 +70,6 @@ import {
   ouvrirFormulaire,
   publierSansEtape2,
 } from "./match";
-dotenv.config();
 
 const SALON_COMMANDES = "🤖・commandes";
 const NOM_ROLE_OWNER = "OWNER";
@@ -134,7 +137,6 @@ commands.set(cv.data.name, cv);
 commands.set(stats.data.name, stats);
 commands.set(servstats.data.name, servstats);
 
-// Correction de l'événement : "ready" au lieu de "clientReady"
 client.once("ready", async () => {
   console.log(`✅ Bot connecté en tant que ${client.user?.tag}`);
 
@@ -310,12 +312,6 @@ client.on("guildMemberRemove", (member) => {
   actualiserSalonCompteur(member.guild).catch(console.error);
 });
 
-// Tentative de connexion avec gestion d'erreur de token
-console.log("🔑 Tentative de connexion à Discord...");
-client.login(process.env.DISCORD_TOKEN).catch((err) => {
-  console.error("❌ Échec de connexion à Discord (vérifie DISCORD_TOKEN sur Render) :", err);
-});
-
 // Serveur HTTP pour satisfaire l'attente d'un port ouvert sur Render
 const server = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
@@ -325,4 +321,10 @@ const server = http.createServer((req, res) => {
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🌐 Serveur HTTP de santé actif sur le port ${PORT}`);
+});
+
+// Tentative de connexion à Discord sécurisée
+console.log("🔑 Tentative de connexion à Discord...");
+client.login(process.env.DISCORD_TOKEN).catch((err) => {
+  console.error("❌ Échec critique de connexion à l'API Discord :", err);
 });
